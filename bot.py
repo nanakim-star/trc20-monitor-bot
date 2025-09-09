@@ -6,7 +6,6 @@ from aiohttp import web # 웹 서버 라이브러리
 
 # --- 1. 환경 변수 로드 ---
 # Render 대시보드의 'Environment' 탭에서 설정해야 합니다.
-WALLET_ADDRESS = os.environ.get("WALLET_ADDRESS") # 모니터링 대상 주소 (참고용으로 남겨둘 수 있음)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 YOUR_WEBSITE_API_URL = os.environ.get("YOUR_WEBSITE_API_URL")
@@ -66,14 +65,20 @@ def process_tatum_webhook_data(data):
     try:
         # [중요] Tatum 웹훅 데이터 구조에 맞춰 파싱해야 합니다.
         # Tatum API 문서를 보고 txid, from, to, amount, symbol 키를 정확히 추출해야 합니다.
-        # 아래는 예시 구조이며, 실제 데이터 형식에 따라 수정이 필요합니다.
-
+        # 아래는 일반적인 입금 알림을 가정한 예시 구조입니다.
+        
         # 예시: if data.get("type") == "INCOMING_TRANSACTION" and data.get("chain") == "TRON":
+        #   (Tatum의 실제 데이터 구조에 따라 아래 키 값들을 수정해야 합니다.)
         txid = data.get("txId", "N/A")
-        amount = float(data.get("amount", 0)) # 금액 파싱 (숫자형으로 변환)
-        from_address = data.get("address", {}).get("from", "N/A") # 데이터 구조에 따라 깊이가 다를 수 있음
-        to_address = data.get("address", {}).get("to", "N/A")
-        token_symbol = data.get("asset", "USDT") # 토큰 심볼 추출
+        amount = float(data.get("amount", 0)) 
+        from_address = data.get("from", "N/A") # 실제 경로는 data.get("address", {}).get("from") 등일 수 있음
+        to_address = data.get("to", "N/A")     # 실제 경로는 data.get("address", {}).get("to") 등일 수 있음
+        token_symbol = data.get("asset", "USDT") 
+
+        # 0원 거래나 불필요한 이벤트 필터링
+        if amount == 0:
+            print(f"[데이터 처리] 금액 0 트랜잭션 필터링됨 (TXID: {txid})")
+            return
 
         print(f"[데이터 처리] 입금 감지: {amount} {token_symbol} from {from_address}")
 
@@ -107,14 +112,12 @@ def process_tatum_webhook_data(data):
 async def handle_tatum_webhook(request):
     """Tatum에서 보낸 POST 요청을 처리합니다."""
     try:
-        # Tatum이 보낸 JSON 데이터를 파싱합니다.
         data = await request.json()
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Tatum Webhook 수신 성공: {data}")
         
         # 데이터 처리 함수 호출
         process_tatum_webhook_data(data)
         
-        # Tatum 서버에 정상 수신 응답 (HTTP 200 OK)
         return web.Response(text="Webhook received successfully")
 
     except Exception as e:
@@ -141,8 +144,7 @@ async def start_web_server():
     print(f"웹훅 수신 주소: http://0.0.0.0:{PORT}/tatum-callback")
     await site.start()
     
-    # 서버가 종료되지 않도록 무한 대기
-    await asyncio.Event().wait()
+    await asyncio.Event().wait() # 서버가 종료되지 않도록 무한 대기
 
 # --- 5. 메인 실행 로직 ---
 
