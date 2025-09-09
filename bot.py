@@ -84,7 +84,7 @@ def process_tatum_webhook_data(data):
 
         # 1. 텔레그램 알림 메시지 생성
         telegram_message = (
-            f"🔔 **Tatum 웹훅 입금 감지 ({token_symbol})** 🔔\n\n"
+            f"🔔 **USDT 자동충전봇이 입금 내역을 감지하였습니다. ({token_symbol})** 🔔\n\n"
             f"💰 **금액:** {amount} {token_symbol}\n"
             f"👤 **보낸 주소:** `{from_address}`\n"
             f"🔗 **TXID:** `{txid}`"
