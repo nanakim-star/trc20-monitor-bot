@@ -63,17 +63,13 @@ def send_to_server_for_charge(tx_data):
 def process_tatum_webhook_data(data):
     """Tatum에서 받은 데이터를 파싱하고 알림/콜백을 실행합니다."""
     try:
-        # [중요] Tatum 웹훅 데이터 구조에 맞춰 파싱해야 합니다.
-        # Tatum API 문서를 보고 txid, from, to, amount, symbol 키를 정확히 추출해야 합니다.
-        # 아래는 일반적인 입금 알림을 가정한 예시 구조입니다.
-        
-        # 예시: if data.get("type") == "INCOMING_TRANSACTION" and data.get("chain") == "TRON":
-        #   (Tatum의 실제 데이터 구조에 따라 아래 키 값들을 수정해야 합니다.)
+        # ★★★★★ 수정된 부분 ★★★★★
+        # Tatum 로그를 기반으로 '보낸 주소'와 '받는 주소'를 정확한 키에서 추출합니다.
         txid = data.get("txId", "N/A")
         amount = float(data.get("amount", 0)) 
-        from_address = data.get("from", "N/A") # 실제 경로는 data.get("address", {}).get("from") 등일 수 있음
-        to_address = data.get("to", "N/A")     # 실제 경로는 data.get("address", {}).get("to") 등일 수 있음
-        token_symbol = data.get("asset", "USDT") 
+        from_address = data.get("counterAddress", "N/A") # '보낸 주소'는 counterAddress 입니다.
+        to_address = data.get("address", "N/A")         # '받는 주소'(내 지갑)는 address 입니다.
+        token_symbol = "USDT"  # USDT_TRON 에서 USDT 부분만 사용하도록 고정
 
         # 0원 거래나 불필요한 이벤트 필터링
         if amount == 0:
@@ -84,7 +80,7 @@ def process_tatum_webhook_data(data):
 
         # 1. 텔레그램 알림 메시지 생성
         telegram_message = (
-            f"🔔 **USDT 자동충전봇이 입금 내역을 감지하였습니다. ({token_symbol})** 🔔\n\n"
+            f"**USDT 충전봇이 지갑에 입금 내역 감지하였습니다.**\n\n"
             f"💰 **금액:** {amount} {token_symbol}\n"
             f"👤 **보낸 주소:** `{from_address}`\n"
             f"🔗 **TXID:** `{txid}`"
